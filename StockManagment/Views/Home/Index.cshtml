@@ -1,0 +1,137 @@
+@using StockManagment.ViewModels
+@model SearchFormViewModel
+<h2>Home</h2>
+<div class="long-title">
+    <h3>Search items</h3>
+</div>
+<div id="form-container">
+    @(Html.DevExtreme().Form<SearchFormViewModel>()
+        .ID("form")
+        .ColCount(2)
+        .Items(items =>
+        {
+
+
+            items.AddSimpleFor(m => m.ProductCode)
+                .Editor(e => e
+                    .SelectBox()
+                    .DataSource(d => d.Mvc().Controller("Data").LoadAction("GetProducts").Key("MalKodu"))
+                        .DisplayExpr("MalAdi")
+                        .ValueExpr("MalKodu")
+                        .SearchEnabled(true)
+
+                    )
+                    .ValidationRules(r => r
+                        .AddRequired()
+                        .Message("Product is required")
+                    );
+
+
+            items.AddSimpleFor(m => m.StartDate)
+                .Editor(e => e
+                    .DateBox()
+                    .Width("100%")
+                )
+                .ValidationRules(r => r
+                    .AddRequired()
+                    .Message("Start date is required")
+                );
+
+
+            items.AddSimpleFor(m => m.EndDate)
+                .Editor(e => e
+                    .DateBox()
+                    .Width("100%")
+                )
+                .ValidationRules(r => r
+                    .AddRequired()
+                    .Message("End date is required")
+                );
+
+        })
+        .OnContentReady(@<text>
+            function(e) {
+                e.component.validate();
+              }
+        </text>)
+        .FormData(Model)
+
+
+    )
+    @(Html.DevExtreme().Button().Text("Search").OnClick("Search"))
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        window.jsPDF = window.jspdf.jsPDF;
+        applyPlugin(window.jsPDF);
+    
+        function getFormInstance() {
+            return $("#form").dxForm("instance");
+        }
+        function getGridInstance() {
+            return $("#StockReportGrid").dxDataGrid("instance");
+        }
+
+        function Search() {
+
+            $("#StockReportGrid").dxDataGrid("getDataSource").reload();
+        }
+        function getFormData() {
+
+            return JSON.stringify(getFormInstance().option("formData"));
+        }
+        function exportToPDF() {
+            var doc = new jsPDF();
+
+            DevExpress.pdfExporter.exportDataGrid({
+                jsPDFDocument: doc,
+                component: getGridInstance()
+            }).then(function () {
+                doc.save("Customers.pdf");
+            });
+        }
+    </script>
+
+</div>
+<div class="long-title">
+    <h3>Result items</h3>
+</div>
+<div id="grid-container">
+   
+
+    @(Html.DevExtreme().Button()
+    .ID("exportButton")
+    .Icon("exportpdf")
+    .Text("Export to PDF")
+    .OnClick("exportToPDF")
+    )
+    @(Html.DevExtreme().DataGrid<StockReportModel>().ID("StockReportGrid")
+    .ShowBorders(true)
+    .DataSource(d => d.Mvc().Controller("Data").LoadAction("Get").LoadParams(new { Value = new JS("getFormData") }))
+    .Columns(columns => {
+        columns.AddFor(m => m.Row);
+        columns.AddFor(m => m.ActionType);
+        columns.AddFor(m => m.InputValue);
+        columns.AddFor(m => m.OutputValue);
+        columns.AddFor(m => m.TotalStock);
+        columns.AddFor(m => m.Date);
+        columns.AddFor(m => m.DocumentNumber);
+
+    })
+    .AllowColumnReordering(true)
+    .Paging(p => p.PageSize(10))
+    .FilterRow(f => f.Visible(true))
+    .HeaderFilter(f => f.Visible(true))
+    .GroupPanel(p => p.Visible(true))
+    .Grouping(g => g.AutoExpandAll(false))
+    .RemoteOperations(true)
+    .Summary(s => s
+        .TotalItems(totalItems => {
+            totalItems.AddFor(m => m.Row).SummaryType(SummaryType.Count);
+        })
+        .GroupItems(groupItems => {
+            groupItems.Add().SummaryType(SummaryType.Count);
+        })
+    )
+)
+</div>
